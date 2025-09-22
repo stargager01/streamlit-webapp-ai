@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>얼굴 움직임 정밀 분석 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .video-section {
+            position: relative;
+            flex: 1;
+            min-width: 300px;
+            max-width: 640px;
+        }
+
+        #videoElement, #outputCanvas {
+            width: 100%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        #outputCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .control-panel {
+            flex: 0 0 350px;
+            background: linear-gradient(145deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-section {
+            margin-bottom: 25px;
+        }
+
+        .status-title {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .status-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .status-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e7ff;
+            color: #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #c7d2fe;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .calibration-section {
+            background: #fef3c7;
+            border: 2px dashed #f59e0b;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .calibration-section.completed {
+            background: #d1fae5;
+            border-color: #10b981;
+        }
+
+        .calibration-info {
+            color: #92400e;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .calibration-section.completed .calibration-info {
+            color: #065f46;
+        }
+
+        .message-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .control-panel {
+                flex: 1;
+                width: 100%;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 얼굴 움직임 정밀 분석 시스템</h1>
+        
+        <div id="messageBox" class="message-box">
+            <span id="messageText">카메라 권한을 요청 중입니다...</span>
+        </div>
+
+        <div class="main-content">
+            <div class="video-section">
+                <video id="videoElement" autoplay playsinline></video>
+                <canvas id="outputCanvas"></canvas>
+            </div>
+
+            <div class="control-panel">
+                <div class="calibration-section" id="calibrationSection">
+                    <div class="status-title">📏 보정 상태</div>
+                    <div class="calibration-info">
+                        신용카드나 주민등록증(가로 85.6mm)을<br>
+                        이마에 대고 '보정 시작' 버튼을 누르세요
+                    </div>
+                    <button id="calibrateBtn" class="btn btn-primary" style="margin-top: 10px;">보정 시작</button>
+                </div>
+
+                <div class="status-section">
+                    <div class="status-title">📊 실시간 측정값</div>
+                    
+                    <div class="status-item">
+                        <span class="status-label">최대 개구량</span>
+                        <span class="status-value" id="maxOpeningValue">0.0 mm</span>
+                    </div>
+                    
+                    <div class="status-item">
+                        <span class="status-label">턱 편이</span>
+                        <span class="status-value" id="jawDeviationValue">중앙</span>
+                    </div>
+                    
+                    <div class="status-item">
+                        <span class="status-label">얼굴 기울기</span>
+                        <span class="status-value" id="headTiltValue">0.0°</span>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="startMeasureBtn" class="btn btn-primary" disabled>측정 시작</button>
+                    <button id="stopMeasureBtn" class="btn btn-secondary" disabled>측정 중지</button>
+                    <button id="resetBtn" class="btn btn-danger">리셋</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
+    
+    <script>
+        // 전역 변수
+        let faceMesh;
+        let camera;
+        let isCalibrated = false;
+        let pixelsPerMM = 1;
+        let isMeasuring = false;
+        let maxOpeningRecord = 0;
+        let maxDeviationRecord = { value: 0, direction: 'Center' };
+        let calibrationPoints = [];
+        let isCalibrating = false;
+
+        // 랜드마크 인덱스 정의
+        const LANDMARKS = {
+            FOREHEAD_CENTER: 10,  // 미간
+            NOSE_TIP: 4,          // 코끝
+            CHIN_TIP: 152,        // 턱 끝
+            UPPER_LIP_INNER: 13,  // 윗입술 안쪽
+            LOWER_LIP_INNER: 14   // 아랫입술 안쪽
+        };
+
+        // DOM 요소
+        const videoElement = document.getElementById('videoElement');
+        const canvasElement = document.getElementById('outputCanvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        
+        const calibrateBtn = document.getElementById('calibrateBtn');
+        const startMeasureBtn = document.getElementById('startMeasureBtn');
+        const stopMeasureBtn = document.getElementById('stopMeasureBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        const maxOpeningValue = document.getElementById('maxOpeningValue');
+        const jawDeviationValue = document.getElementById('jawDeviationValue');
+        const headTiltValue = document.getElementById('headTiltValue');
+        const calibrationSection = document.getElementById('calibrationSection');
+ 
+		
+		let trajectoryPoints = [];
+
+		function drawTrajectory() {
+			if (trajectoryPoints.length < 2) return;
+
+			canvasCtx.beginPath();
+			canvasCtx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
+			for (let i = 1; i < trajectoryPoints.length; i++) {
+				canvasCtx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+			}
+			canvasCtx.strokeStyle = 'rgba(255, 165, 0, 0.8)'; // 주황색
+			canvasCtx.lineWidth = 2;
+			canvasCtx.stroke();
+		}
+
+        // 초기화
+        function initializeFaceMesh() {
+            faceMesh = new FaceMesh({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`;
+                }
+            });
+
+            faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            faceMesh.onResults(onResults);
+
+            camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await faceMesh.send({ image: videoElement });
+                },
+                width: 640,
+                height: 480
+            });
+
+            camera.start().then(() => {
+                updateMessage('카메라가 성공적으로 연결되었습니다!', 'success');
+                setTimeout(() => messageBox.style.display = 'none', 3000);
+            }).catch(err => {
+                updateMessage('카메라 접근 실패: ' + err.message, 'error');
+            });
+        }
+
+        // Face Mesh 결과 처리
+        function onResults(results) {
+            // 캔버스 크기 설정
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            
+            // 캔버스 클리어
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks[0]) {
+                const landmarks = results.multiFaceLandmarks[0];
+                
+                // 랜드마크 그리기
+                drawLandmarks(landmarks);
+                
+                // 중심선 그리기
+                drawCenterLine(landmarks);
+                
+                // 보정 모드
+                if (isCalibrating) {
+                    handleCalibration(landmarks);
+                }
+                
+                // 측정 모드
+                if (isMeasuring && isCalibrated) {
+                    measureMetrics(landmarks);
+                }
+                
+                // 얼굴 기울기 계산 (항상 표시)
+                calculateHeadTilt(landmarks);
+            }
+            
+            canvasCtx.restore();
+        }
+
+        // 랜드마크 그리기
+        function drawLandmarks(landmarks) {
+            // 모든 랜드마크 점 그리기
+            landmarks.forEach((landmark, i) => {
+                const x = landmark.x * canvasElement.width;
+                const y = landmark.y * canvasElement.height;
+                
+                canvasCtx.beginPath();
+                canvasCtx.arc(x, y, 2, 0, 2 * Math.PI);
+                
+                // 주요 랜드마크는 다른 색상으로 표시
+                if (i === LANDMARKS.FOREHEAD_CENTER || 
+                    i === LANDMARKS.NOSE_TIP || 
+                    i === LANDMARKS.CHIN_TIP ||
+                    i === LANDMARKS.UPPER_LIP_INNER ||
+                    i === LANDMARKS.LOWER_LIP_INNER) {
+                    canvasCtx.fillStyle = '#ff0000';
+                    canvasCtx.strokeStyle = '#ff0000';
+                } else {
+                    canvasCtx.fillStyle = '#00ff00';
+                    canvasCtx.strokeStyle = '#00ff00';
+                }
+                
+                canvasCtx.fill();
+            });
+        }
+
+        // 중심선 그리기
+        function drawCenterLine(landmarks) {
+            const forehead = landmarks[LANDMARKS.FOREHEAD_CENTER];
+            const noseTip = landmarks[LANDMARKS.NOSE_TIP];
+            const chinTip = landmarks[LANDMARKS.CHIN_TIP];
+            
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(forehead.x * canvasElement.width, forehead.y * canvasElement.height);
+            canvasCtx.lineTo(noseTip.x * canvasElement.width, noseTip.y * canvasElement.height);
+            canvasCtx.lineTo(chinTip.x * canvasElement.width, chinTip.y * canvasElement.height);
+            canvasCtx.strokeStyle = '#ffff00';
+            canvasCtx.lineWidth = 2;
+            canvasCtx.stroke();
+        }
+
+        // 보정 처리
+        function handleCalibration(landmarks) {
+            // 이마 영역의 랜드마크들을 사용하여 카드 크기 감지
+            // 실제 구현에서는 컴퓨터 비전 기법으로 카드 모서리를 감지해야 함
+            // 여기서는 간단한 시뮬레이션
+            
+            canvasCtx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            canvasCtx.fillRect(
+                canvasElement.width * 0.3, 
+                canvasElement.height * 0.1,
+                canvasElement.width * 0.4,
+                canvasElement.height * 0.15
+            );
+            
+            canvasCtx.strokeStyle = '#ffff00';
+            canvasCtx.lineWidth = 3;
+            canvasCtx.strokeRect(
+                canvasElement.width * 0.3, 
+                canvasElement.height * 0.1,
+                canvasElement.width * 0.4,
+                canvasElement.height * 0.15
+            );
+            
+            canvasCtx.fillStyle = '#000';
+            canvasCtx.font = '20px Arial';
+            canvasCtx.fillText('카드를 이 영역에 맞춰주세요', canvasElement.width * 0.35, canvasElement.height * 0.05);
+        }
+
+        // 측정 메트릭 계산
+        function measureMetrics(landmarks) { 
+	
+			
+            // 1. 최대 개구량 계산
+            const upperLip = landmarks[LANDMARKS.UPPER_LIP_INNER];
+            const lowerLip = landmarks[LANDMARKS.LOWER_LIP_INNER];
+            
+            const openingPixels = Math.abs(upperLip.y - lowerLip.y) * canvasElement.height;
+            const openingMM = openingPixels / pixelsPerMM-2;
+            
+			// 1. 실시간 개구량 표시
+			maxOpeningValue.textContent = `${openingMM.toFixed(1)} mm`;
+
+			// 2. 최대값 갱신
+			if (openingMM > maxOpeningRecord) {
+				maxOpeningRecord = openingMM;
+			}
+
+            
+            // 3. 턱 편이 계산
+            const forehead = landmarks[LANDMARKS.FOREHEAD_CENTER];
+            const noseTip = landmarks[LANDMARKS.NOSE_TIP];
+            const chinTip = landmarks[LANDMARKS.CHIN_TIP];
+            
+            // 중심선의 x 좌표 계산 (미간과 코끝의 평균)
+            const centerLineX = (forehead.x + noseTip.x) / 2;
+            
+            // 턱 끝의 편이 계산
+            const deviationPixels = (chinTip.x - centerLineX) * canvasElement.width;
+            const deviationMM = Math.abs(deviationPixels) / pixelsPerMM;
+			// 4. 턱끝좌표기록
+			const chinX = chinTip.x * canvasElement.width;
+			const chinY = chinTip.y * canvasElement.height;
+			trajectoryPoints.push({ x: chinX, y: chinY });
+
+			// 궤적 그리기
+			drawTrajectory();
+            if (deviationMM > maxDeviationRecord.value) {
+                maxDeviationRecord.value = deviationMM;
+                maxDeviationRecord.direction = deviationPixels > 0 ? 'Right' : 'Left';
+                
+                const directionKor = deviationPixels > 0 ? 'Rt.' : 'Lt.';
+                jawDeviationValue.textContent = `${directionKor} ${deviationMM.toFixed(1)} mm`;
+            }
+            
+            // 시각적 피드백
+            drawMeasurementLines(upperLip, lowerLip, chinTip, centerLineX);
+        }
+
+        // 측정선 그리기
+        function drawMeasurementLines(upperLip, lowerLip, chinTip, centerLineX) {
+            // 개구량 선
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(upperLip.x * canvasElement.width, upperLip.y * canvasElement.height);
+            canvasCtx.lineTo(lowerLip.x * canvasElement.width, lowerLip.y * canvasElement.height);
+            canvasCtx.strokeStyle = '#00ffff';
+            canvasCtx.lineWidth = 3;
+            canvasCtx.stroke();
+            
+            // 편이 선
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(centerLineX * canvasElement.width, chinTip.y * canvasElement.height);
+            canvasCtx.lineTo(chinTip.x * canvasElement.width, chinTip.y * canvasElement.height);
+            canvasCtx.strokeStyle = '#ff00ff';
+            canvasCtx.lineWidth = 3;
+            canvasCtx.stroke();
+        }
+
+        // 얼굴 기울기 계산
+        function calculateHeadTilt(landmarks) {
+            const forehead = landmarks[LANDMARKS.FOREHEAD_CENTER];
+            const chinTip = landmarks[LANDMARKS.CHIN_TIP];
+            
+            const deltaX = chinTip.x - forehead.x;
+            const deltaY = chinTip.y - forehead.y;
+            
+            let angle = Math.atan2(deltaX, deltaY) * (180 / Math.PI);
+            
+            headTiltValue.textContent = `${angle.toFixed(1)}°`;
+        }
+
+        // 메시지 업데이트
+        function updateMessage(text, type = 'info') {
+            messageText.textContent = text;
+            messageBox.style.display = 'block';
+            messageBox.className = 'message-box';
+            
+            if (type === 'error') {
+                messageBox.style.borderColor = '#ef4444';
+                messageBox.style.background = '#fee2e2';
+            } else if (type === 'success') {
+                messageBox.style.borderColor = '#10b981';
+                messageBox.style.background = '#d1fae5';
+            }
+        }
+
+        // 이벤트 리스너
+        calibrateBtn.addEventListener('click', () => {
+            if (!isCalibrating) {
+                isCalibrating = true;
+                calibrateBtn.textContent = '보정 완료';
+                updateMessage('카드를 이마에 대고 화면의 사각형 영역에 맞춰주세요', 'info');
+                
+                // 3초 후 자동 보정 완료 (실제로는 카드 감지 알고리즘 필요)
+                setTimeout(() => {
+                    // 시뮬레이션: 85.6mm = ~240 pixels (예시값)
+                    pixelsPerMM = 240 / 85.6;
+                    isCalibrated = true;
+                    isCalibrating = false;
+                    
+                    calibrationSection.classList.add('completed');
+                    calibrationSection.querySelector('.calibration-info').innerHTML = 
+                        `✅ 보정 완료!<br>1mm = ${pixelsPerMM.toFixed(2)} pixels`;
+                    
+                    startMeasureBtn.disabled = false;
+                    calibrateBtn.disabled = true;
+                    
+                    updateMessage('보정이 완료되었습니다. 측정을 시작할 수 있습니다!', 'success');
+                    setTimeout(() => messageBox.style.display = 'none', 3000);
+                }, 3000);
+            }
+        });
+
+        startMeasureBtn.addEventListener('click', () => {
+            if (isCalibrated && !isMeasuring) {
+                isMeasuring = true;
+                startMeasureBtn.disabled = true;
+                stopMeasureBtn.disabled = false;
+                // 궤적초기화
+				trajectoryPoints = [];
+
+                // 기록 초기화
+                maxOpeningRecord = 0;
+                maxDeviationRecord = { value: 0, direction: 'Center' };
+                
+                updateMessage('측정을 시작합니다. 입을 천천히 벌려주세요.', 'info');
+                setTimeout(() => messageBox.style.display = 'none', 3000);
+            }
+        });
+
+		stopMeasureBtn.addEventListener('click', () => {
+		  if (isMeasuring) {
+			isMeasuring = false;
+			startMeasureBtn.disabled = false;
+			stopMeasureBtn.disabled = true;
+
+			const resultData = {
+			  timestamp: new Date().toISOString(),
+			  measurements: {
+				maxOpening_mm: parseFloat(maxOpeningRecord.toFixed(1)),
+				jawDeviation_mm: parseFloat(maxDeviationRecord.value.toFixed(1)),
+				jawDeviation_direction: maxDeviationRecord.direction
+			  },
+			  calibration: { pixelsPerMM: parseFloat(pixelsPerMM.toFixed(2)) }
+			};
+
+			console.log('측정 결과:', JSON.stringify(resultData, null, 2));
+			updateMessage('측정이 완료되었습니다. 결과가 콘솔에 출력되었습니다.', 'success');
+
+			// 화면 스냅샷 저장 (최대개구량/턱편이판정 포함)
+			// 현재 DOM 표시값을 사용하므로 update 직후에 호출
+			requestAnimationFrame(() => captureSnapshot());
+		  }
+		});
+
+		stopMeasureBtn.addEventListener('click', () => {
+			if (isMeasuring) {
+				isMeasuring = false;
+				startMeasureBtn.disabled = false;
+				stopMeasureBtn.disabled = true;
+
+				// 최종 패턴 분석
+				analyzePattern();
+
+				const resultData = {
+					timestamp: new Date().toISOString(),
+					measurements: {
+						maxOpening_mm: parseFloat(maxOpeningRecord.toFixed(1)),
+						jawDeviation_mm: parseFloat(maxDeviationRecord.value.toFixed(1)),
+						jawDeviation_direction: maxDeviationRecord.direction
+					},
+					calibration: { pixelsPerMM: parseFloat(pixelsPerMM.toFixed(2)) }
+				};
+
+				console.log('측정 결과:', JSON.stringify(resultData, null, 2));
+				updateMessage('측정이 완료되었습니다. 결과가 콘솔에 출력되었습니다.', 'success');
+
+				requestAnimationFrame(() => captureSnapshot());
+			}
+		});
+
+		function analyzePattern() {
+			const threshold = 2.0; // mm
+			let pattern = 'Normal';
+			let patternKo = '정상';
+
+			if (maxDeviationRecord.value >= threshold) {
+				if (Math.abs(maxDeviationRecord.value - 0) >= threshold) {
+					pattern = 'Deflection';
+					patternKo = '굴절';
+				} else {
+					pattern = 'Deviation';
+					patternKo = '편차';
+				}
+			}
+
+			// jawDeviationValue에 최종 판정 표시
+			jawDeviationValue.textContent = `${patternKo} (${pattern})`;
+
+			// 필요하다면 색상 클래스 적용
+			jawDeviationValue.className = 'status-value';
+			if (pattern === 'Normal') {
+				jawDeviationValue.classList.add('pattern-normal');
+			} else if (pattern === 'Deviation') {
+				jawDeviationValue.classList.add('pattern-deviation');
+			} else {
+				jawDeviationValue.classList.add('pattern-deflection');
+			}
+		}
+
+
+		// 스냅샷 생성 및 다운로드
+		function captureSnapshot() {
+		  // 비디오/캔버스 크기 기준
+		  const width = videoElement.videoWidth || canvasElement.width;
+		  const height = videoElement.videoHeight || canvasElement.height;
+		  if (!width || !height) {
+			updateMessage('스냅샷을 만들 수 없습니다. 비디오 초기화 상태를 확인하세요.', 'error');
+			return;
+		  }
+
+		  // 오프스크린 캔버스 생성
+		  const snapCanvas = document.createElement('canvas');
+		  snapCanvas.width = width;
+		  snapCanvas.height = height;
+		  const ctx = snapCanvas.getContext('2d');
+
+		  // 1) 비디오 프레임 그리기
+		  try {
+			ctx.drawImage(videoElement, 0, 0, width, height);
+		  } catch (e) {
+			// 비디오 그리기 실패 시 배경 처리
+			ctx.fillStyle = '#000';
+			ctx.fillRect(0, 0, width, height);
+		  }
+
+		  // 2) 분석 오버레이 캔버스 합성 (현재 그려진 랜드마크/선 등)
+		  ctx.drawImage(canvasElement, 0, 0, width, height);
+
+		  // 3) 측정 텍스트 오버레이 (최대개구량, 턱편이판정, 필요시 머리 기울기)
+		  const maxOpeningText = maxOpeningValue.textContent;      // e.g., "43.2 mm"
+		  const jawText = jawDeviationValue.textContent;           // e.g., "Rt. 2.5 mm" 또는 "중앙"
+		  const headTiltText = headTiltValue.textContent;          // e.g., "1.2°"
+
+		  // 정보 박스 스타일
+		  const pad = 14;
+		  const boxW = Math.min(360, Math.round(width * 0.45));
+		  const boxH = 110;
+		  const boxX = width - boxW - 20;
+		  const boxY = 20;
+
+		  // 반투명 박스
+		  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+		  ctx.roundRect?.(boxX, boxY, boxW, boxH, 10);
+		  if (!ctx.roundRect) {
+			// 라운드 지원 안되면 일반 사각형
+			ctx.fillRect(boxX, boxY, boxW, boxH);
+		  } else {
+			ctx.fill();
+		  }
+
+		  // 텍스트
+		  ctx.fillStyle = '#fff';
+		  ctx.font = 'bold 18px Segoe UI, Arial, sans-serif';
+		  ctx.fillText('측정 요약', boxX + pad, boxY + pad + 6);
+
+		  ctx.font = '16px Segoe UI, Arial, sans-serif';
+		  const line1 = `최대개구량: ${maxOpeningText}`;
+		  const line2 = `턱편이판정: ${jawText}`;
+		  const line3 = `얼굴 기울기: ${headTiltText}`;
+
+		  ctx.fillText(line1, boxX + pad, boxY + 40);
+		  ctx.fillText(line2, boxX + pad, boxY + 64);
+		  ctx.fillText(line3, boxX + pad, boxY + 88);
+
+		  // 4) 파일 저장
+		  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+		  const link = document.createElement('a');
+		  link.download = `mm-snapshot_${ts}.png`;
+		  link.href = snapCanvas.toDataURL('image/png');
+		  link.click();
+		}
+		
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            initializeFaceMesh();
+        });
+    </script>
+</body>
+</html>

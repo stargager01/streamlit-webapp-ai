@@ -1,0 +1,6 @@
+streamlit==1.49.1
+fpdf2==2.8.4
+pillow==11.3.0
+PyMuPDF==1.26.4
+reportlab==4.4.3
+streamlit-local-storage==0.0.25 
