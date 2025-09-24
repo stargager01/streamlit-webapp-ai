@@ -13,7 +13,7 @@ if "show_ar" not in st.session_state:
     st.session_state.show_ar = False
 
 # 토글 버튼
-if st.button("AR 실행 화면 보기/숨기기"):
+if st.button("개구량측정 보기/숨기기"):
     st.session_state.show_ar = not st.session_state.show_ar
 
 # index.html 읽기
