@@ -389,6 +389,7 @@
 
   // ===== 결과/UI 업데이트 =====
   function updateUI(res){
+	drawOpeningValueOnOverlay(res.openingMM);
     $('vFusion').textContent = `${res.openingMM.toFixed(1)} mm`;
     $('vLips').textContent   = `${res.raw.lip_mm.toFixed(1)} mm`;
     $('vNC').textContent     = `${res.raw.nc_mm.toFixed(1)} mm`;
@@ -452,6 +453,11 @@
 	  ctx.stroke();
 	  ctx.restore();
 	}
+function drawOpeningValueOnOverlay(value) {
+  ctx.font = 'bold 24px Segoe UI';
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText(`개구량: ${value.toFixed(1)} mm`, 20, 40);
+}
 
 
   // 시작
