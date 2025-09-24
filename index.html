@@ -39,7 +39,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>🔬 개구량 측정 — 통합 엔진(입술 & 코–턱) + FaceGuide</h1>
+    <h1>🔬 개구량 측정 — 통합 엔진(입술 & 코–턱)</h1>
     <div id="msg" class="msg">카메라 권한을 요청 중입니다…</div>
 
     <div class="main">
@@ -54,6 +54,9 @@
           <div class="section-title">📏 보정 상태</div>
           <div id="calibInfo">안경(정면 폭 140mm)을 얼굴에 맞추고 <b>보정 시작</b>을 누르세요.</div>
           <button id="btnCalib" class="p" style="margin-top:10px">보정 시작</button>
+          <button id="btnStart" class="p" disabled>측정 시작</button>
+          <button id="btnStop" class="s" disabled>측정 중지</button>
+          <button id="btnReset" class="d">리셋</button>
         </div>
 
         <div class="section-title">📊 실시간 측정</div>
@@ -65,9 +68,7 @@
         <div class="kv"><div class="k">최대 개구량(통합)</div><div class="v" id="vMax">0.0 mm</div></div>
 
         <div class="btns">
-          <button id="btnStart" class="p" disabled>측정 시작</button>
-          <button id="btnStop" class="s" disabled>측정 중지</button>
-          <button id="btnReset" class="d">리셋</button>
+
         </div>
         <div class="debug">
           <span class="k">엔진:</span>
@@ -386,7 +387,7 @@
   }
 	function drawFaceGuideOnCapture(ctx, W, H){
 	  const guideW = W * 0.46 ; // 현재 CSS width 비율 × 원하는 축소 비율
-	  const guideH = H * 0.66 ; // aspect-ratio 반영
+	  const guideH = H * 0.46 ; // aspect-ratio 반영
 	  const cx = W/2, cy = H/2;
 
 	  ctx.save();
