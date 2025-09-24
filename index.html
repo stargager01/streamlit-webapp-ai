@@ -13,15 +13,33 @@
     .video-wrap{position:relative;flex:1;min-width:320px;max-width:720px}
     video,canvas{width:100%;height:auto;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
     #overlay{position:absolute;inset:0}
+ 
+	/* FaceGuide */
+	#faceGuide{
+	  position:absolute;
+	  top:50%;
+	  left:50%;
+	  transform:translate(-50%,-50%);
+	  width:46%;
+	  aspect-ratio:400/666;         /* 유지: 원하는 가이드 비율 */
+	  border:3px dashed rgba(255,255,255,.55);
+	  border-radius:24px;            /* 둥근사각형 */
+	  pointer-events:none;
+	  display:flex;
+	  align-items:center;
+	  justify-content:center;
+	  z-index:10
+	}
+	#faceGuide.active{
+	  border-color:#22c55e;
+	  animation:pulse 1s infinite
+	}
 
-    /* FaceGuide */
-    #faceGuide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46%;aspect-ratio:500/666;border:3px dashed rgba(255,255,255,.55);border-radius:15%/20%;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:10}
-    #faceGuide.active{border-color:#22c55e;animation:pulse 1s infinite}
     #guideText{color:#fff;background:rgba(0,0,0,.45);padding:8px 12px;border-radius:8px;font-weight:700}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 
     .panel{flex:0 0 360px;background:linear-gradient(145deg,#f5f7fa,#c3cfe2);border-radius:12px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
-    .section-title{font-weight:700;color:#444;margin:6px 0 10px}
+    .section-title{font-weight:500;color:#444;margin:6px 0 10px}
     .kv{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px}
     .k{color:#666}
     .v{font-weight:700;color:#5850ec}
@@ -63,7 +81,7 @@
         <div class="kv"><div class="k">통합 개구량</div><div class="v" id="vFusion">0.0 mm</div></div>
         <div class="kv"><div class="k">입술 기반</div><div class="v" id="vLips">0.0 mm</div></div>
         <div class="kv"><div class="k">코–턱 기반</div><div class="v" id="vNC">0.0 mm</div></div>
-        <div class="kv"><div class="k">가중치</div><div class="v" id="vW">lip 50% / nc 50%</div></div>
+         <div class="kv"><div class="k">가중치</div><div class="v" id="vW">lip 50% / nc 50%</div></div> 
         <div class="kv"><div class="k">얼굴 기울기(roll)</div><div class="v" id="vRoll">0.0°</div></div>
         <div class="kv"><div class="k">최대 개구량(통합)</div><div class="v" id="vMax">0.0 mm</div></div>
 
@@ -175,19 +193,37 @@
   }
 
   // ===== FaceGuide 판정 =====
-  function isInFaceGuide(lm,W,H){
-    // 가이드 박스 기준: 화면 중앙의 가로 70% 타원 내부 & 크기 범위
-    const mid = lm[IDX.MID_BROW], chin = lm[IDX.CHIN_TIP], nose = lm[IDX.NOSE_TIP];
-    const cx = W/2, cy = H/2;
-    const faceCx = (nose.x*W + chin.x*W)/2, faceCy = (nose.y*H + chin.y*H)/2;
-    const boxW = W*0.70, boxH = H*0.70;
-    const nx = (faceCx - cx)/(boxW/2); const ny = (faceCy - cy)/(boxH/2);
-    const inEllipse = (nx*nx + ny*ny) <= 1.0;
-    // 얼굴 세로길이(미간-턱)로 크기 체크
-    const len = Math.hypot((mid.x-chin.x)*W,(mid.y-chin.y)*H);
-    const sizeOK = len > H*0.25 && len < H*0.55;
-    return inEllipse && sizeOK;
-  }
+	function isInFaceGuide(lm, W, H){
+	  const nose = lm[IDX.NOSE_TIP], chin = lm[IDX.CHIN_TIP], mid = lm[IDX.MID_BROW];
+	  const faceCx = (nose.x*W + chin.x*W)/2, faceCy = (nose.y*H + chin.y*H)/2;
+
+	  const guideW = W * 0.70, guideH = H * 0.70;
+	  const halfW = guideW / 2, halfH = guideH / 2;
+	  const r = Math.min(guideW, guideH) * 0.08; // 모서리 반지름 비율
+
+	  const dx = faceCx - W/2, dy = faceCy - H/2;
+
+	  // 축 기준 코어 사각형 (모서리 라운드 제외 영역)
+	  const coreW = halfW - r, coreH = halfH - r;
+
+	  let inGuide = false;
+
+	  if (Math.abs(dx) <= coreW && Math.abs(dy) <= halfH) inGuide = true;       // 좌우 코어
+	  else if (Math.abs(dy) <= coreH && Math.abs(dx) <= halfW) inGuide = true;  // 상하 코어
+	  else {
+		// 모서리 4개 중 해당 원 내부 판정
+		const cornerX = (dx > 0 ? coreW : -coreW);
+		const cornerY = (dy > 0 ? coreH : -coreH);
+		const cx = cornerX, cy = cornerY;
+		inGuide = ((dx - cx)**2 + (dy - cy)**2) <= r**2;
+	  }
+
+	  const len = Math.hypot((mid.x-chin.x)*W,(mid.y-chin.y)*H);
+	  const sizeOK = len > H*0.25 && len < H*0.55;
+
+	  return inGuide && sizeOK;
+	}
+
 
   // ===== 메시지/DOM =====
   function setMsg(t, ok){ const el=$('msg'); el.textContent=t; el.style.background= ok?'#ecfdf5':'#eff6ff'; el.style.borderLeftColor = ok?'#10b981':'#3b82f6'; }
@@ -385,20 +421,38 @@
       $('faceGuide').classList.remove('active'); $('guideText').textContent='얼굴을 여기에 맞춰주세요';
     }
   }
+	function drawRoundedRect(ctx, x, y, w, h, r) {
+	  const radius = Math.min(r, Math.min(w, h) / 2);
+	  ctx.beginPath();
+	  ctx.moveTo(x + radius, y);
+	  ctx.lineTo(x + w - radius, y);
+	  ctx.arcTo(x + w, y, x + w, y + radius, radius);
+	  ctx.lineTo(x + w, y + h - radius);
+	  ctx.arcTo(x + w, y + h, x + w - radius, y + h, radius);
+	  ctx.lineTo(x + radius, y + h);
+	  ctx.arcTo(x, y + h, x, y + h - radius, radius);
+	  ctx.lineTo(x, y + radius);
+	  ctx.arcTo(x, y, x + radius, y, radius);
+	  ctx.closePath();
+	}
+
 	function drawFaceGuideOnCapture(ctx, W, H){
-	  const guideW = W * 0.46 ; // 현재 CSS width 비율 × 원하는 축소 비율
-	  const guideH = H * 0.46 ; // aspect-ratio 반영
+	  const guideW = W * 0.46;
+	  const guideH = H * 0.92;
 	  const cx = W/2, cy = H/2;
+	  const x = cx - guideW/2, y = cy - guideH/2;
 
 	  ctx.save();
 	  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
 	  ctx.lineWidth = 3;
-	  ctx.setLineDash([10,6]); // dashed border
-	  ctx.beginPath();
-	  ctx.ellipse(cx, cy, guideW/2, guideH/2, 0, 0, 2*Math.PI);
+	  ctx.setLineDash([10,6]);
+
+	  // 둥근사각형 (모서리 반지름 24px)
+	  drawRoundedRect(ctx, x, y, guideW, guideH, 32);
 	  ctx.stroke();
 	  ctx.restore();
 	}
+
 
   // 시작
   window.addEventListener('load', init);
